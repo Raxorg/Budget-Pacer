@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Budget Pacer</title>
+<style>
+:root{color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#0b0d12;--card:#12151c;--line:rgba(255,255,255,.09);--txt:#e8ebf2;--mute:#8a93a6;
+--green:#3ddc97;--red:#ff5d6c;--orange:#db9b4c;--blue:#5b8cff}
+html{scroll-padding-top:env(safe-area-inset-top,0px);min-height:100%;background:radial-gradient(900px 500px at 80% -10%,rgba(91,140,255,.12),rgba(91,140,255,0)) no-repeat,var(--bg)}
+*{box-sizing:border-box}
+body{margin:0;color:var(--txt);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:28px 16px 48px}
+.grid{display:grid;gap:16px;grid-template-columns:1fr 1fr}
+@media(max-width:640px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:12px 18px;--c:var(--blue);transition:border-color .2s}
+.card.under{--c:var(--green)}.card.over{--c:var(--orange)}.card.even{--c:var(--blue)}
+.card{border-color:color-mix(in srgb,var(--c) 35%,transparent)}
+.head{display:flex;align-items:center;gap:8px}
+.row{display:flex;justify-content:space-between;align-items:flex-end;align-items:last baseline;gap:14px;margin-bottom:18px}
+.lbl{display:flex;flex-direction:column;gap:6px}
+.top b{font-size:14px}
+.pill{font-size:11px;color:var(--mute);border:1px solid var(--line);border-radius:99px;padding:2px 9px}
+.pill.live{color:var(--green);border-color:rgba(61,220,151,.4)}
+[hidden]{display:none!important}
+.gold{display:inline-flex;align-items:center;gap:8px;margin-bottom:16px;padding:5px 13px;border-radius:99px;border:1px solid rgba(201,162,74,.45);background:rgba(201,162,74,.1);color:#c9a24a;font-size:13px;font-weight:600}
+.gold::before{content:"";width:7px;height:7px;border-radius:50%;background:#c9a24a}
+.verdict{color:var(--c);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.big{font-size:44px;font-weight:700;letter-spacing:-.03em;color:var(--c);line-height:1.1;margin:0}
+.meter{margin-bottom:14px}
+.lab{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px}
+.lab span{color:var(--mute)}
+.bar{height:12px;border-radius:99px;background:rgba(255,255,255,.06);border:1px solid var(--line);overflow:hidden}
+.fill{height:100%;border-radius:99px;transition:width .3s}
+.fill.q{background:var(--c)}
+.fill.t{background:rgba(255,255,255,.4)}
+.stats{border-top:1px solid var(--line);margin-top:18px;padding-top:12px;display:grid;gap:6px;font-size:13px}
+.stats div{display:flex;justify-content:space-between;gap:10px}
+.stats span{color:var(--mute)}
+.stats:empty{display:none}
+.stats .note{display:block;margin-top:2px;font-size:12px;color:var(--mute)}
+.sec{grid-column:1/-1;margin:8px 0 -4px;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+#err{color:var(--mute);border:1px dashed var(--line);border-radius:16px;padding:18px;font-size:14px}
+code{background:#0d1016;border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:12px}
+</style>
+</head>
+<body>
+<main>
+<div id="err">Waiting for API connection… Run <code>node pacer-server.js</code> and open <code>http://localhost:8787</code>.</div>
+<div class="gold" id="rs" hidden></div>
+<div class="grid" id="grid"></div>
+</main>
+
+<script>
+const WIN={h5:300,wk:10080,c5:300,cw:10080};
+const NAMES={h5:"5-hour",wk:"Weekly",c5:"5-hour",cw:"Weekly"};
+const SUB={h5:"5 hours",wk:"7 days",c5:"5 hours",cw:"7 days"};
+const D={};
+const ALL=["h5","wk","c5","cw"];
+const PROV=[["h5","wk"],["c5","cw"]];
+const $=id=>document.getElementById(id);
+const r1=n=>(Math.round(n*10)/10).toString();
+function dur(min){min=Math.max(0,Math.round(min));const d=Math.floor(min/1440),h=Math.floor(min%1440/60),m=min%60;
+return [d&&d+"d",(h||d)&&h+"h",m+"m"].filter(Boolean).join(" ")}
+
+for(const [title,keys] of [["GPT · Codex",["h5","wk"]],["Claude",["c5","cw"]]]){
+ $("grid").insertAdjacentHTML("beforeend",`<div class="sec" id="h_${keys[0]}">${title}</div>`);
+ for(const k of keys)$("grid").insertAdjacentHTML("beforeend",`
+ <div class="card even" id="c_${k}">
+  <div class="row">
+   <div class="lbl"><div class="head"><b>${NAMES[k]}</b><span class="pill" id="p_${k}">Stale</span></div><div class="verdict" id="v_${k}"></div></div>
+   <div class="big" id="b_${k}"></div>
+  </div>
+  <div class="meter"><div class="lab"><span>Quota left</span><b id="ql_${k}"></b></div><div class="bar"><div class="fill q" id="qf_${k}"></div></div></div>
+  <div class="meter"><div class="lab"><span>Time left</span><b id="tl_${k}"></b></div><div class="bar"><div class="fill t" id="tf_${k}"></div></div></div>
+  <div class="stats" id="s_${k}"></div>
+ </div>`);
+}
+
+function calc(k){
+ const d=D[k];
+ if(!d){
+  $("c_"+k).className="card even";
+  $("v_"+k).textContent="No data";$("b_"+k).textContent="—";
+  $("ql_"+k).textContent="—";$("tl_"+k).textContent="—";
+  $("qf_"+k).style.width="0%";$("tf_"+k).style.width="0%";
+  $("s_"+k).innerHTML="";return;
+ }
+ const W=WIN[k],rem=d.resetsAt!=null?d.resetsAt-Date.now()/1000:null;
+ const expired=rem==null||rem<=0;
+ const left=expired?100:Math.min(100,Math.max(0,100-d.used));
+ const remain=expired?W:Math.min(W,rem/60);               // minutes
+ const timeLeft=remain/W*100;
+ const delta=left-timeLeft;                                // + = underspent, - = overspent
+ const used=100-left,elapsed=W-remain;
+ const cls=Math.abs(delta)<=2.5?"even":delta>0?"under":"over";
+ $("c_"+k).className="card "+cls;
+ $("v_"+k).textContent=expired?"Fresh window":cls==="even"?"On pace":delta>0?"Underspending":"Overspending";
+ $("b_"+k).textContent=(delta>0?"+":delta<0?"−":"")+r1(Math.abs(delta))+"%";
+ $("ql_"+k).textContent=r1(left)+"%";
+ $("tl_"+k).textContent=r1(timeLeft)+"% · "+dur(remain);
+ $("qf_"+k).style.width=left+"%";
+ $("tf_"+k).style.width=timeLeft+"%";
+ let note="";
+ if(elapsed>1&&used>0){
+  const proj=used/(elapsed/W);
+  if(proj>100){const toEmpty=left/(used/elapsed);note=`Pace reaches 0% in ${dur(toEmpty)}, ${dur(remain-toEmpty)} before the reset`}
+  else note=`Spend about ${r1(left/(remain/60||1))}% per hour to land exactly at 0%`;
+ }
+ $("s_"+k).innerHTML=note?`<div class="note">${note}</div>`:"";
+}
+
+function vis(){   // show a provider's section only once it has returned data
+ for(const keys of PROV){const on=keys.some(k=>D[k]);$("h_"+keys[0]).hidden=!on;keys.forEach(k=>$("c_"+k).hidden=!on)}
+}
+function pill(k,live){const p=$("p_"+k);p.textContent=live?"Live":"Stale";p.className=live?"pill live":"pill"}
+
+async function pull(url,map){
+ try{
+  const r=await fetch(url,{cache:"no-store"});
+  if(!r.ok)throw 0;
+  const d=await r.json();
+  for(const [slot,k] of map){
+   const l=d[slot];
+   if(!l||l.used_percent==null){pill(k,false);continue}
+   D[k]={used:l.used_percent,resetsAt:l.resets_at};
+   pill(k,true);
+  }
+  return d;
+ }catch(e){map.forEach(([,k])=>pill(k,false))}
+}
+async function sync(){
+ const [g]=await Promise.all([
+  pull("/api/limits",[["primary","h5"],["secondary","wk"]]),
+  pull("/api/claude",[["primary","c5"],["secondary","cw"]])
+ ]);
+ if(Object.keys(D).length)$("err").hidden=true;   // hide as soon as at least one provider is connected
+ if(g){
+  const n=g.resets_available;
+  $("rs").hidden=!(n>0);
+  if(n>0)$("rs").textContent="GPT: "+n+(n===1?" reset":" resets")+" available";
+ }
+ vis();ALL.forEach(calc);
+}
+vis();ALL.forEach(calc);
+sync();setInterval(sync,30000);
+</script>
+</body>
+</html>
