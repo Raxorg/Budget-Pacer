@@ -1,0 +1,30 @@
+# Runtime data and secrets must never be committed
+logs/
+*.log
+*.jsonl
+.pacer-test-*/
+node_modules/
+backups/
+integration/
+Pillo/
+.codex/
+.claude/
+auth.json
+.credentials.json
+.env
+.env.*
+*.pem
+*.key
+*.pfx
+*.p12
+*.tmp
+*.zip
+*.rar
+Thumbs.db
+.DS_Store
+
+# Private development memory
+AGENTS.md
+CONTEXTO.md
+BITACORA.md
+INTEGRACION_PILLO.md

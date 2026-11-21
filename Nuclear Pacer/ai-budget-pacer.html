@@ -1,0 +1,351 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Budget Pacer</title>
+<link rel="icon" type="image/png" href="/icon.png">
+<style>
+:root{color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#0b0d12;--card:#12151c;--line:rgba(255,255,255,.09);--txt:#e8ebf2;--mute:#8a93a6;
+--green:#3ddc97;--red:#ff5d6c;--blue:#5b8cff}
+html{scroll-padding-top:env(safe-area-inset-top,0px);min-height:100%;background:radial-gradient(900px 500px at 80% -10%,rgba(91,140,255,.12),rgba(91,140,255,0)) no-repeat,var(--bg)}
+*{box-sizing:border-box}
+body{margin:0;color:var(--txt);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:28px 16px 48px}
+.grid{display:grid;gap:16px;grid-template-columns:1fr 1fr}
+@media(max-width:640px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px;--c:var(--blue);transition:border-color .2s}
+.card{min-width:0}.lab{flex-wrap:wrap;gap:4px 12px}.stats{overflow-wrap:anywhere}
+.card.under{--c:var(--green)}.card.over{--c:var(--red)}.card.even{--c:var(--blue)}
+.card{border-color:color-mix(in srgb,var(--c) 35%,transparent)}
+.top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:8px 12px}
+.head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.vb{margin-left:auto;text-align:right}
+.top b{font-size:14px}
+.pill{font-size:11px;color:var(--mute);border:1px solid var(--line);border-radius:99px;padding:2px 9px}
+.pill.live{color:var(--green);border-color:rgba(61,220,151,.4)}
+[hidden]{display:none!important}
+.gold{display:inline-flex;align-items:center;gap:8px;margin-bottom:16px;padding:5px 13px;border-radius:99px;border:1px solid rgba(201,162,74,.45);background:rgba(201,162,74,.1);color:#c9a24a;font-size:13px;font-weight:600}
+.gold::before{content:"";width:7px;height:7px;border-radius:50%;background:#c9a24a}
+.verdict{font-size:13px;color:var(--c);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.big{font-size:44px;font-weight:700;letter-spacing:-.03em;color:var(--c);line-height:1.1;margin:2px 0 18px}
+.meter{margin-bottom:14px}
+.lab{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px}
+.lab span{color:var(--mute)}
+.bar{height:12px;border-radius:99px;background:rgba(255,255,255,.06);border:1px solid var(--line);overflow:hidden}
+.fill{height:100%;border-radius:99px;transition:width .3s}
+.fill.q{background:var(--c)}
+.fill.t{background:rgba(255,255,255,.4)}
+.stats{border-top:1px solid var(--line);margin-top:18px;padding-top:12px;display:grid;gap:6px;font-size:13px}
+.stats div{display:flex;justify-content:space-between;gap:10px}
+.stats span{color:var(--mute)}
+.stats:empty{display:none}
+.stats .note{display:block;margin-top:2px;font-size:12px;color:var(--mute)}
+.reset-info,#timezone{color:var(--mute);font-size:12px;overflow-wrap:anywhere}
+.reset-info{margin-top:12px}.reset-info p{margin:3px 0}#timezone{margin:12px 2px}
+#err{color:var(--mute);border:1px dashed var(--line);border-radius:16px;padding:18px;font-size:14px}
+code{background:#0d1016;border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:12px}
+</style>
+</head>
+<body>
+<main>
+<noscript>JavaScript is required to display local quota data.</noscript>
+<div id="err" role="status"></div>
+<div class="gold" id="rs" hidden></div>
+<div class="grid" id="grid"></div>
+<p id="timezone"></p>
+</main>
+
+<script>
+const TEXT=/*TRANSLATIONS*/{
+  "en": {
+    "five": "5-hour window",
+    "week": "Weekly window",
+    "fiveDuration": "5 hours",
+    "weekDuration": "7 days",
+    "quota": "Quota left",
+    "time": "Time left",
+    "under": "Underspending",
+    "over": "Overspending",
+    "even": "On pace",
+    "fresh": "Fresh window",
+    "live": "Live",
+    "local": "local",
+    "offline": "offline",
+    "unknown": "unknown",
+    "expired": "expired",
+    "awaiting": "Awaiting new data",
+    "unavailable": "Data unavailable",
+    "afterReset": "A valid local record after the reset is required.",
+    "noWindow": "No valid record for this window.",
+    "next": "Next reset: {date}",
+    "pending": "Next reset: awaiting confirmation",
+    "oldReset": " · expired record: {date}",
+    "unknownReset": "Next reset: unknown",
+    "localPending": "local time pending",
+    "stale": " (not updated)",
+    "countdown": "Countdown: {duration}",
+    "fromRecord": " · according to local record",
+    "disconnectedRecord": " · last record; connection interrupted",
+    "waitingReset": "Waiting for a record after the reset.",
+    "noReset": "No valid reset date in the record.",
+    "record": "Last local record: {date}.",
+    "failedRecord": " Update failed; showing the last record.",
+    "dry": "At this pace you will run dry in {empty}, {early} before the reset.",
+    "allowance": "You could spend about {rate} per hour from here and land exactly at 0%.",
+    "zone": "Windows time zone: {zone}",
+    "zoneMismatch": " · Browser reports {zone}; using Windows.",
+    "zoneMissing": "Windows time zone unavailable. The browser zone ({zone}) is not substituted.",
+    "detecting": "Detecting Windows time zone…",
+    "waiting": "Waiting for local Codex records…",
+    "noRecords": "Server connected. No local quota records yet. Use Codex and wait for a new local record.",
+    "invalidRecords": "No valid local records for the supported windows.",
+    "updateFailed": "Update failed. Check the local server. Any displayed quota comes from the last local record.",
+    "activityFailed": "The monitor could not confirm its activity. Reload this page; the local server may shut down after inactivity.",
+    "fileHelp": "Open \"Iniciar Budget Pacer.cmd\" to start the monitor at http://localhost:8787. This HTML needs the local server.",
+    "resetsOne": "{n} reset available",
+    "resetsMany": "{n} resets available",
+    "day": "d",
+    "hour": "h",
+    "minute": "m",
+    "second": "s",
+    "noscript": "JavaScript is required to display local quota data."
+  },
+  "es": {
+    "five": "Ventana de 5 horas",
+    "week": "Ventana semanal",
+    "fiveDuration": "5 horas",
+    "weekDuration": "7 días",
+    "quota": "Cuota restante",
+    "time": "Tiempo restante",
+    "under": "Consumo bajo",
+    "over": "Consumo elevado",
+    "even": "Ritmo equilibrado",
+    "fresh": "Ventana reiniciada",
+    "live": "En directo",
+    "local": "local",
+    "offline": "sin conexión",
+    "unknown": "desconocido",
+    "expired": "vencido",
+    "awaiting": "Esperando nuevos datos",
+    "unavailable": "Datos no disponibles",
+    "afterReset": "Se necesita un registro local válido posterior al reinicio.",
+    "noWindow": "No hay un registro válido para esta ventana.",
+    "next": "Próximo reinicio: {date}",
+    "pending": "Próximo reinicio: pendiente de confirmar",
+    "oldReset": " · registro vencido: {date}",
+    "unknownReset": "Próximo reinicio: desconocido",
+    "localPending": "horario local pendiente",
+    "stale": " (sin actualizar)",
+    "countdown": "Cuenta regresiva: {duration}",
+    "fromRecord": " · según registro local",
+    "disconnectedRecord": " · último registro; conexión interrumpida",
+    "waitingReset": "Esperando un registro posterior al reinicio.",
+    "noReset": "Sin una fecha de reinicio válida en el registro.",
+    "record": "Último registro local: {date}.",
+    "failedRecord": " Falló la actualización; se muestra el último registro.",
+    "dry": "A este ritmo agotarás la cuota en {empty}, {early} antes del reinicio.",
+    "allowance": "Puedes consumir aproximadamente {rate} por hora para llegar al reinicio con la cuota justa.",
+    "zone": "Zona horaria de Windows: {zone}",
+    "zoneMismatch": " · El navegador detecta {zone}; se usa Windows.",
+    "zoneMissing": "Zona horaria de Windows: no disponible. No se sustituye por la del navegador ({zone}).",
+    "detecting": "Detectando la zona horaria de Windows…",
+    "waiting": "Esperando registros locales de Codex…",
+    "noRecords": "Servidor conectado. Aún no hay registros locales de cuota. Usa Codex y espera un nuevo registro local.",
+    "invalidRecords": "No hay registros locales válidos para las ventanas admitidas.",
+    "updateFailed": "Falló la actualización. Comprueba el servidor local. La cuota mostrada procede del último registro local.",
+    "activityFailed": "El monitor no pudo confirmar su actividad. Recarga esta página; el servidor local podría apagarse por inactividad.",
+    "fileHelp": "Abre \"Iniciar Budget Pacer.cmd\" para iniciar el monitor en http://localhost:8787. Este HTML necesita el servidor local.",
+    "resetsOne": "{n} reinicio disponible",
+    "resetsMany": "{n} reinicios disponibles",
+    "day": "d",
+    "hour": "h",
+    "minute": "min",
+    "second": "s",
+    "noscript": "Se necesita JavaScript para mostrar los datos locales de cuota."
+  }
+}/*END_TRANSLATIONS*/;
+const INITIAL_LOCALE=/*PACER_LOCALE*/null;
+const MONITOR_KEY=/*PACER_MONITOR*/null;
+const WIN={h5:300,wk:10080};
+
+let D={};
+let connected=false, syncing=false;
+let systemZone=null;
+const browserZone=Intl.DateTimeFormat().resolvedOptions().timeZone;
+const $=id=>document.getElementById(id);
+let language='en',locale='en-US',numberFormat,percentFormat;
+function t(key,values={}){return TEXT[language][key].replace(/\{(\w+)\}/g,(_,name)=>values[name]??'');}
+function setLocale(settings){
+ language=settings?.language==='es'?'es':'en';
+ try{locale=Intl.getCanonicalLocales(settings?.locale||'en-US')[0]||'en-US';}catch{locale='en-US';}
+ numberFormat=new Intl.NumberFormat(locale,{maximumFractionDigits:1});
+ percentFormat=new Intl.NumberFormat(locale,{style:'percent',maximumFractionDigits:1});
+ if(document.documentElement)document.documentElement.lang=language;
+}
+function localizeLabels(){for(const k of ['h5','wk']){
+ $('name_'+k).textContent=t(k==='h5'?'five':'week');$('sub_'+k).textContent=t(k==='h5'?'fiveDuration':'weekDuration');
+ $('quotaLabel_'+k).textContent=t('quota');$('timeLabel_'+k).textContent=t('time');
+}}
+setLocale(INITIAL_LOCALE);
+const r1=n=>numberFormat.format(Math.round(n*10)/10);
+const pct=n=>percentFormat.format(n/100);
+function dur(min){min=Math.max(0,Math.round(min));const d=Math.floor(min/1440),h=Math.floor(min%1440/60),m=min%60;
+return [d&&r1(d)+t("day"),(h||d)&&r1(h)+t("hour"),r1(m)+t("minute")].filter(Boolean).join(" ")}
+
+function localDate(ms){
+ if(!systemZone||!Number.isFinite(ms)||!Number.isFinite(new Date(ms).getTime()))return null;
+ return new Intl.DateTimeFormat(locale,{timeZone:systemZone,day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date(ms));
+}
+function countdown(seconds){
+ const total=Math.max(0,Math.ceil(seconds));
+ const days=Math.floor(total/86400),hours=Math.floor(total%86400/3600),minutes=Math.floor(total%3600/60),secs=total%60;
+ const two=n=>new Intl.NumberFormat(locale,{minimumIntegerDigits:2,useGrouping:false}).format(n);
+ return (days?r1(days)+t('day')+' ':'')+r1(hours)+t('hour')+' '+two(minutes)+t('minute')+' '+two(secs)+t('second');
+}
+async function syncTime(){
+ try{
+  const response=await fetch("/api/time",{cache:"no-store",signal:AbortSignal.timeout(3000)});
+  if(!response.ok)throw new Error("Time unavailable");
+  const data=await response.json();
+  setLocale(data);localizeLabels();
+  if(typeof data.time_zone!=="string"||!data.time_zone)throw new Error("Invalid time zone");
+  // Validate the name without changing the clock or applying any offset.
+  new Intl.DateTimeFormat(locale,{timeZone:data.time_zone}).format();
+  systemZone=data.time_zone;
+  $("timezone").textContent=t('zone',{zone:systemZone})+(browserZone!==systemZone?t('zoneMismatch',{zone:browserZone}):'');
+ }catch{
+  $("timezone").textContent=systemZone?t('zone',{zone:systemZone})+t('stale'):t('zoneMissing',{zone:browserZone});
+ }
+}
+
+for(const k of ["h5","wk"]){
+ $("grid").insertAdjacentHTML("beforeend",`
+ <div class="card even" id="c_${k}">
+  <div class="top">
+   <div class="head"><b><span id="name_${k}">${t(k==="h5"?"five":"week")}</span> · <span id="sub_${k}">${t(k==="h5"?"fiveDuration":"weekDuration")}</span></b><span class="pill" id="p_${k}"></span></div>
+   <div class="vb"><div class="verdict" id="v_${k}"></div><div class="big" id="b_${k}"></div></div>
+  </div>
+  <div class="meter"><div class="lab"><span id="quotaLabel_${k}">${t("quota")}</span><b id="ql_${k}"></b></div><div class="bar"><div class="fill q" id="qf_${k}"></div></div></div>
+  <div class="meter"><div class="lab"><span id="timeLabel_${k}">${t("time")}</span><b id="tl_${k}"></b></div><div class="bar"><div class="fill t" id="tf_${k}"></div></div></div>
+  <div class="stats" id="s_${k}"></div>
+  <div class="reset-info"><p id="reset_${k}"></p><p id="countdown_${k}"></p></div>
+ </div>`);
+}
+
+function calc(k){
+ const d=D[k],W=WIN[k];
+ const rem=d&&d.resetsAt!=null?d.resetsAt-Date.now()/1000:null;
+ const known=d&&rem!=null&&rem>0;
+ const resetDate=d&&d.resetsAt!=null?localDate(d.resetsAt*1000):null;
+ $("reset_"+k).textContent=rem!=null&&rem<=0?
+  t('pending')+(resetDate?t('oldReset',{date:resetDate}):''):
+  !known?t('unknownReset'):t('next',{date:resetDate||t('localPending')})+(connected?'':t('stale'));
+ $("countdown_"+k).textContent=known?t('countdown',{duration:countdown(rem)})+t(connected?'fromRecord':'disconnectedRecord'):t(rem!=null&&rem<=0?'waitingReset':'noReset');
+ const pill=$("p_"+k);
+ pill.textContent=t(!connected?'offline':!d||rem==null?'unknown':rem<=0?'expired':'local');
+ pill.className="pill";
+ if(!known){
+  $("c_"+k).className="card even";
+  $("v_"+k).textContent=t(d&&rem!=null&&rem<=0?'awaiting':'unavailable');
+  for(const id of ["b_","ql_","tl_"])$(id+k).textContent="\u2014";
+  for(const id of ["qf_","tf_"])$(id+k).style.width="0%";
+  $("s_"+k).textContent=t(d?'afterReset':'noWindow');
+  return;
+ }
+ const left=Math.min(100,Math.max(0,100-d.used));
+ const remain=Math.min(W,rem/60);
+ const timeLeft=remain/W*100;
+ const delta=left-timeLeft;
+ const used=100-left,elapsed=W-remain;
+ const cls=Math.abs(delta)<=1.5?"even":delta>0?"under":"over";
+ $("c_"+k).className="card "+cls;
+ $("v_"+k).textContent=t(cls);
+ $("b_"+k).textContent=(delta>0?"+":delta<0?"\u2212":"")+pct(Math.abs(delta));
+ $("ql_"+k).textContent=pct(left);
+ $("tl_"+k).textContent=pct(timeLeft)+" \u00b7 "+dur(remain);
+ $("qf_"+k).style.width=left+"%";
+ $("tf_"+k).style.width=timeLeft+"%";
+ let note="";
+ if(elapsed>1&&used>0){
+  const proj=used/(elapsed/W);
+  if(proj>100){const toEmpty=left/(used/elapsed);note=t('dry',{empty:dur(toEmpty),early:dur(remain-toEmpty)})}
+  else note=t('allowance',{rate:pct(left/(remain/60||1))});
+ }
+ const stamp=t('record',{date:localDate(d.loggedAt)||t('localPending')});
+ $("s_"+k).textContent=stamp+(connected?'':t('failedRecord'))+(note?" "+note:"");
+}
+
+async function heartbeat(){
+ if(!MONITOR_KEY)return true; // Raw-file/DOM test context has no server session.
+ try{
+  const response=await fetch('/api/heartbeat',{method:'POST',headers:{'X-Budget-Pacer-Monitor':MONITOR_KEY},cache:'no-store',signal:AbortSignal.timeout(3000)});
+  return response.ok;
+ }catch{return false;}
+}
+async function sync(){
+ if(syncing)return;
+ if(typeof location!=="undefined"&&location.protocol==="file:"){
+  $("err").hidden=false;
+  $("err").textContent=t('fileHelp');
+  return;
+ }
+ syncing=true;
+ const controller=new AbortController();
+ const timeout=setTimeout(()=>controller.abort(),10000);
+ let activityOk=true;
+ try{
+  activityOk=await heartbeat();
+  await syncTime();
+  const r=await fetch("/api/limits",{cache:"no-store",signal:controller.signal});
+  if(r.status===404){
+   const missing=await r.json();
+   if(missing.error!=="No valid local rate-limit records found.")throw new Error("Unexpected endpoint");
+   D={};connected=true;
+   $("rs").hidden=true;
+   $("err").hidden=false;
+   $("err").textContent=t('noRecords');
+   return;
+  }
+  if(!r.ok)throw new Error("Update failed");
+  const d=await r.json();
+  if(!d||typeof d!=="object"||Array.isArray(d)||(!("primary" in d)&&!("secondary" in d)))throw new Error("Invalid response");
+  const next={};
+  for(const l of [d.primary,d.secondary]){
+   if(!l||!Number.isFinite(l.used_percent)||l.used_percent<0||l.used_percent>100)continue;
+   const k=l.window_minutes===300?"h5":l.window_minutes===10080?"wk":null;
+   const at=l.logged_at;
+   if(!k||!Number.isFinite(at)||!Number.isFinite(new Date(at).getTime())||at>Date.now()+60000)continue;
+   if(next[k]&&next[k].loggedAt>at)continue;
+   next[k]={used:l.used_percent,resetsAt:Number.isFinite(l.resets_at)&&l.resets_at>0?l.resets_at:null,loggedAt:at};
+  }
+  D=next;
+  connected=true;
+  $("err").hidden=!!(D.h5||D.wk);
+  if(!$("err").hidden)$("err").textContent=t('invalidRecords');
+  const n=d.resets_available;
+  $("rs").hidden=!(Number.isInteger(n)&&n>0);
+  if(!$("rs").hidden)$("rs").textContent=t(n===1?'resetsOne':'resetsMany',{n:r1(n)});
+ }catch(e){
+  connected=false;
+  $("rs").hidden=true;
+  $("err").hidden=false;
+  $("err").textContent=t('updateFailed');
+ }finally{
+  clearTimeout(timeout);
+  syncing=false;
+  $("grid").hidden=false;
+  calc("h5");calc("wk");
+  if(connected&&!activityOk){$("err").hidden=false;$("err").textContent=t('activityFailed');}
+ }
+}
+localizeLabels();$('err').textContent=t('waiting');$('timezone').textContent=t('detecting');
+calc("h5");calc("wk");
+sync();setInterval(sync,30000);
+setInterval(()=>{calc("h5");calc("wk")},1000);
+document.addEventListener?.('visibilitychange',()=>{if(document.visibilityState==='visible')sync();});
+globalThis.addEventListener?.('pageshow',()=>sync());
+</script>
+</body>
+</html>
