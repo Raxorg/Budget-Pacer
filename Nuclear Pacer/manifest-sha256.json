@@ -1,0 +1,70 @@
+[
+  {
+    "file": ".gitattributes",
+    "sha256": "a12fb5ad61086543ace8b42560a475f501555ed26146e1cd2a8459d81010d6e7"
+  },
+  {
+    "file": ".gitignore",
+    "sha256": "f28ddab580d5a8a32cb19b8c4861fcae8cf6debd0096d9d30ac045aa6c5e9b66"
+  },
+  {
+    "file": "Iniciar Budget Pacer - LibreWolf.cmd",
+    "sha256": "0c08f01f25ff29ee0107df35cce286a60feead2d582b33642fd81e73e9f9d278"
+  },
+  {
+    "file": "Iniciar Budget Pacer.cmd",
+    "sha256": "c2c16372599a68d5b742b3b1aca40570f0453a3dc1f58bcf621dd335fd551945"
+  },
+  {
+    "file": "ORIGEN.md",
+    "sha256": "5c9f24a074b88fcf4ccbf908a0f0dec5baf11b71d26bff5cff663dea6edc17bd"
+  },
+  {
+    "file": "README.md",
+    "sha256": "44e830a859d74d190555a883e54bfa64e1deba9c7563da6a569af9217bacf4d5"
+  },
+  {
+    "file": "ai-budget-pacer.html",
+    "sha256": "b84b026f126a0f068ffd07fd5a143b4f2195df091d80d04d37d983681dc22135"
+  },
+  {
+    "file": "icon.png",
+    "sha256": "45ccdf3cff937bbc440dd8661fb545ed06c4d5d8ed75ba5ef6d09251e7c6b9fb"
+  },
+  {
+    "file": "launcher.test.js",
+    "sha256": "93990cd1f7152bdb180656fce5726e8ad0bb68ee6cc46272ebf26e20f8ca616d"
+  },
+  {
+    "file": "librewolf.test.js",
+    "sha256": "75891e425c9483a6df1356a132ebd9d8c834efaa3b65c713554ccbd2acfdcdda"
+  },
+  {
+    "file": "lifecycle.test.js",
+    "sha256": "ee3db2a7805790029d742e5d24a1400b1d81e466bb0f5277f364e6624417a704"
+  },
+  {
+    "file": "localization.test.js",
+    "sha256": "7ed30f0c660936a9b2cb66c4d8a8ebd0dc9bf291e64d4f51990644346abf0449"
+  },
+  {
+    "file": "pacer-launcher.js",
+    "sha256": "03bbcdad492701f6fe4978a2b9e47c8b25e95d0b83b4a9381f48839f745976c3"
+  },
+  {
+    "file": "pacer-librewolf.js",
+    "sha256": "93ec7c6eeab11ced765014c8666621ede94397632571f26b95d6dcfec6a9ef4b"
+  },
+  {
+    "file": "pacer-server.js",
+    "sha256": "c1a14e8a3476183128e8df6c3ec4504377b6b1b51294dfe122cca8b8d2eed09b"
+  },
+  {
+    "file": "pacer.test.js",
+    "sha256": "be7aab4b11fba6f01b8021abf097ac131fa8c63726e9067aa42029356844b8c9"
+  },
+  {
+    "file": "timezone.test.js",
+    "sha256": "c8613240aaa6b50554b9c71f67a6da191d3d3a75cc71eb301d4c63e3b215e510"
+  }
+]
